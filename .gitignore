@@ -23,6 +23,6 @@ temp/
 .DS_Store
 Thumbs.db
 
-# Ignore generated audio files
+# Ignore input and output files
+input/
 output/
-
