@@ -68,14 +68,21 @@ for file in input_files:
 
         output_file = OUTPUT_DIR / (file.stem + ".mp3")
 
-        response = client.audio.speech.create(
+        # Using the recommended streaming approach instead of stream_to_file
+        with client.audio.speech.with_streaming_response.create(
             model="gpt-4o-mini-tts",
             voice="ballad",
             input=text,
             instructions=instructions
-        )
-        response.stream_to_file(output_file)
-        print(f"✅ Audio saved to: {output_file}")
+        ) as response:
+            # Save the streaming response to file
+            bytes_written = 0
+            with open(str(output_file), 'wb') as f:
+                for chunk in response.iter_bytes():
+                    bytes_written += len(chunk)
+                    f.write(chunk)
+            
+            print(f"✅ Audio saved to: {output_file} ({bytes_written} bytes)")
 
     except Exception as e:
         print(f"❌ Error with file {file.name}: {e}")
