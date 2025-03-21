@@ -97,6 +97,8 @@ The graphical interface allows you to:
 - Easily manage your API key
 - Select output folder
 
+![image](https://github.com/user-attachments/assets/487d14d1-b6cf-4a23-8298-ad2af847793d)
+
 ---
 
 ## 💬 Supported TTS Models
