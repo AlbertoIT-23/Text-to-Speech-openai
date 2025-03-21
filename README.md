@@ -22,6 +22,11 @@ python -m venv tts-venv
 pip install openai python-dotenv python-docx pymupdf
 ```
 
+For the GUI version, also install:
+```bash
+pip install tkinter asyncio
+```
+
 ### 4. Add your OpenAI API key
 Create a `.env` file in the root directory with the following content:
 ```
@@ -65,11 +70,24 @@ python universal_tts.py
 ```
 All files in the `input/` folder will be processed automatically.
 
+### Or use the GUI version
+```bash
+python universal-tts-gui.py
+```
+The graphical interface allows you to:
+- Input text directly or load files
+- Select from 11 different voices
+- Choose the TTS model
+- Customize voice instructions
+- Preview audio before generating the full file
+- Easily manage your API key
+- Select output folder
+
 ---
 
 ## 💬 Supported TTS Models
 
-For intelligent realtime applications, use the `gpt-4o-mini-tts` model — OpenAI’s newest and most flexible TTS engine.
+For intelligent realtime applications, use the `gpt-4o-mini-tts` model — OpenAI's newest and most flexible TTS engine.
 You can customize the voice using the `instructions` parameter:
 
 ### You can control:
@@ -99,6 +117,7 @@ Choose from 11 built-in voices:
 - nova
 - sage
 - shimmer
+- verse
 
 You can preview them at [openai.fm](https://openai.fm)
 
@@ -115,4 +134,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ---
 
 Enjoy building your custom voice assistant or narrator! 🎧
-
