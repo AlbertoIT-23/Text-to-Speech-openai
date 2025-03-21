@@ -28,8 +28,9 @@ Create a `.env` file in the root directory with the following content:
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-### 5. Add input files
-Place your `.txt`, `.docx`, or `.pdf` files inside the `input/` folder.
+### 5. Create the `input/` folder  
+If it doesn't exist, manually create a folder named `input/` in the root directory.  
+Then place your `.txt`, `.docx`, or `.pdf` files inside it.
 
 ### 6. (Optional) Add voice instructions
 Create a file named `instructions.txt` with the desired style, e.g.:
@@ -95,7 +96,7 @@ Choose from 11 built-in voices:
 - echo
 - fable
 - onyx
-- nova *(default in this script)*
+- nova
 - sage
 - shimmer
 
