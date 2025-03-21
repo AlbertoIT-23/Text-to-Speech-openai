@@ -129,6 +129,8 @@ class UniversalTTSApp:
         
         self.text_input = scrolledtext.ScrolledText(text_tab, height=10)
         self.text_input.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        self.text_input.insert(tk.END, "Welcome to the Universal Text-to-Speech tool. This is a simple example of what you can create with OpenAI's speech synthesis API. You can customize the voice, tone, and style to suit your needs.")
         
         # Tab 2: File Input
         file_tab = ttk.Frame(self.tab_control)
@@ -510,8 +512,8 @@ class UniversalTTSApp:
             messagebox.showerror("Error", "Please enter text or select a file with content")
             return
         
-        # Get a small sample of text for preview (first 150 chars or first paragraph)
-        preview_text = text[:150]
+        # Get a small sample of text for preview (first 190 chars or first paragraph)
+        preview_text = text[:190]
         if "\n" in preview_text:
             preview_text = preview_text.split("\n")[0]
         
