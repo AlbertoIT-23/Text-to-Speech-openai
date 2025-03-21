@@ -13,6 +13,15 @@ import json
 import datetime
 import asyncio
 
+# Aggiungiamo il supporto per il sistema di credenziali
+try:
+    import keyring
+    import getpass
+    KEYRING_AVAILABLE = True
+except ImportError:
+    KEYRING_AVAILABLE = False
+    logging.warning("keyring package not available. Install with: pip install keyring")
+
 # Load .env file
 load_dotenv()
 
@@ -23,7 +32,8 @@ class UniversalTTSApp:
         self.root.geometry("900x800")  # Dimensione iniziale più grande
         self.root.minsize(800, 700)   
         
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        # Modifica inizializzazione della API key per usare il keyring se disponibile
+        self.api_key = self.get_api_key_from_sources()
         self.client = None
         self.async_client = None
         if self.api_key:
@@ -234,7 +244,7 @@ class UniversalTTSApp:
         
         generate_button = tk.Button(
             center_generate_frame,
-            text="GENERA AUDIO",
+            text="GENERA FILE AUDIO",
             command=self.generate_speech,
             font=('Arial', 11, 'bold'),
             background='#2E7D32',
@@ -248,73 +258,146 @@ class UniversalTTSApp:
         )
         generate_button.pack(padx=5, pady=2)  # Non più fill=tk.X
     
+    def get_api_key_from_sources(self):
+        """Prova diverse fonti per ottenere l'API key in ordine di sicurezza."""
+        # 1. Prova prima con la variabile d'ambiente (più sicura)
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            logging.info("API key found in environment variable")
+            return api_key
+            
+        # 2. Prova con il sistema di credenziali del sistema operativo (se disponibile)
+        if KEYRING_AVAILABLE:
+            try:
+                api_key = keyring.get_password(SERVICE_NAME, USERNAME)
+                if api_key:
+                    logging.info("API key found in system credential manager")
+                    return api_key
+            except Exception as e:
+                logging.warning(f"Error accessing system credentials: {e}")
+        
+        # 3. Fallback: prova con il file .env (meno sicuro)
+        # load_dotenv() è già stato chiamato all'inizio, quindi non serve ripeterlo qui
+        
+        logging.info("No API key found in any secure storage")
+        return None    
+
     def update_api_key(self):
         new_key = self.api_entry.get().strip()
         if new_key:
-            # Evitare di registrare l'API key nei log
-            logging.info("Processing API key update request")
-            
-            # Update environment variable for current session
+            # Aggiorna per la sessione corrente
             os.environ["OPENAI_API_KEY"] = new_key
             self.api_key = new_key
             self.client = OpenAI(api_key=self.api_key)
             self.async_client = AsyncOpenAI(api_key=self.api_key)
             logging.info("API Key updated for current session")
             
-            # Ask if user wants to update the .env file
-            if messagebox.askyesno("Update .env File", 
-                                 "API Key updated for this session. Would you like to save it to the .env file for future use?\n\nNote: This will store your API key in a local file."):
-                try:
-                    env_path = Path(".env")
+            # Versione semplificata con scelte esplicite
+            if KEYRING_AVAILABLE:
+                # Prima domanda: vuoi salvare la chiave per usi futuri?
+                save_choice = messagebox.askyesno(
+                    "Salvataggio API Key",
+                    "API Key aggiornata per questa sessione.\n\n"
+                    "Vuoi salvare la chiave per usi futuri?\n\n"
+                    "• SÌ = Salva per usi futuri\n"
+                    "• NO = Usa solo per questa sessione",
+                    icon=messagebox.QUESTION
+                )
+                
+                if save_choice:
+                    # Seconda domanda: quale metodo di salvataggio preferisci?
+                    secure_choice = messagebox.askyesno(
+                        "Metodo di Salvataggio",
+                        "Quale metodo di salvataggio preferisci?\n\n"
+                        "• SÌ = Salva nel gestore credenziali di sistema (consigliato)\n"
+                        "• NO = Salva in un file .env (meno sicuro)",
+                        icon=messagebox.QUESTION
+                    )
                     
-                    # If .env exists, read and update it
-                    if env_path.exists():
-                        with open(env_path, "r") as f:
-                            lines = f.readlines()
-                        
-                        found = False
-                        for i, line in enumerate(lines):
-                            if line.startswith("OPENAI_API_KEY="):
-                                lines[i] = f"OPENAI_API_KEY={new_key}\n"
-                                found = True
-                                break
-                        
-                        if not found:
-                            lines.append(f"OPENAI_API_KEY={new_key}\n")
-                        
-                        with open(env_path, "w") as f:
-                            f.writelines(lines)
+                    if secure_choice:
+                        # Salva nel gestore credenziali
+                        try:
+                            SERVICE_NAME = "OpenAI-TTS-App"
+                            USERNAME = getpass.getuser()
+                            keyring.set_password(SERVICE_NAME, USERNAME, new_key)
+                            messagebox.showinfo("Successo", 
+                                              "API Key salvata in modo sicuro nel gestore credenziali del sistema")
+                        except Exception as e:
+                            messagebox.showerror("Errore", 
+                                               f"Impossibile salvare nel gestore credenziali: {e}")
                     else:
-                        # Create new .env file
-                        with open(env_path, "w") as f:
-                            f.write(f"OPENAI_API_KEY={new_key}\n")
-                    
-                    # Tentare di rendere il file accessibile solo all'utente corrente
-                    try:
-                        if os.name == 'nt':  # Windows
-                            import subprocess
-                            subprocess.call(['icacls', str(env_path), '/inheritance:r', '/grant', f'{os.getlogin()}:F'])
-                        else:  # Unix-like
-                            os.chmod(str(env_path), 0o600)  # Read/write permissions for owner only
-                        logging.info("Applied restricted permissions to .env file")
-                    except Exception as e:
-                        logging.warning(f"Could not set restrictive permissions on .env file: {e}")
-                    
-                    logging.info("API Key saved to .env file")
-                    messagebox.showinfo("Success", "API Key saved to .env file successfully\nNote: For better security, consider using system credential storage.")
-                except Exception as e:
-                    error_msg = f"Failed to update .env file: {str(e)}"
-                    logging.error(error_msg)
-                    messagebox.showerror("Error", error_msg)
+                        # Salva in .env
+                        self._save_to_env_file(new_key)
+                else:
+                    # Solo sessione
+                    messagebox.showinfo("Successo", 
+                                      "API Key aggiornata solo per questa sessione")
             else:
-                logging.info("User chose not to save API Key to .env file")
-                messagebox.showinfo("Success", "API Key updated for this session only")
+                # Versione semplificata senza keyring
+                if messagebox.askyesno(
+                    "Salvataggio API Key",
+                    "API Key aggiornata per questa sessione.\n\n"
+                    "Vuoi salvare la chiave in un file .env per usi futuri?\n\n"
+                    "• SÌ = Salva nel file .env\n"
+                    "• NO = Usa solo per questa sessione\n\n"
+                    "Per una maggiore sicurezza, considera l'installazione del pacchetto 'keyring':\n"
+                    "pip install keyring",
+                    icon=messagebox.QUESTION
+                ):
+                    self._save_to_env_file(new_key)
+                else:
+                    messagebox.showinfo("Successo", 
+                                      "API Key aggiornata solo per questa sessione")
             
             return True
         else:
-            logging.warning("Invalid API Key provided")
-            messagebox.showerror("Error", "Please enter a valid API Key")
+            messagebox.showerror("Errore", "Inserisci una API Key valida")
             return False
+    
+    def _save_to_env_file(self, new_key):
+        """Helper method to save API key to .env file with proper permissions"""
+        try:
+            env_path = Path(".env")
+            
+            # If .env exists, read and update it
+            if env_path.exists():
+                with open(env_path, "r") as f:
+                    lines = f.readlines()
+                
+                found = False
+                for i, line in enumerate(lines):
+                    if line.startswith("OPENAI_API_KEY="):
+                        lines[i] = f"OPENAI_API_KEY={new_key}\n"
+                        found = True
+                        break
+                
+                if not found:
+                    lines.append(f"OPENAI_API_KEY={new_key}\n")
+                
+                with open(env_path, "w") as f:
+                    f.writelines(lines)
+            else:
+                # Create new .env file
+                with open(env_path, "w") as f:
+                    f.write(f"OPENAI_API_KEY={new_key}\n")
+            
+            # Tentare di rendere il file accessibile solo all'utente corrente
+            try:
+                if os.name == 'nt':  # Windows
+                    import subprocess
+                    subprocess.call(['icacls', str(env_path), '/inheritance:r', '/grant', f'{os.getlogin()}:F'])
+                else:  # Unix-like
+                    os.chmod(str(env_path), 0o600)  # Read/write permissions for owner only
+                logging.info("Applied restricted permissions to .env file")
+            except Exception as e:
+                logging.warning(f"Could not set restrictive permissions on .env file: {e}")
+            
+            logging.info("API Key saved to .env file")
+            messagebox.showinfo("Success", "API Key saved to .env file successfully\nNote: For better security, consider using system credential storage.")
+        except Exception as e:
+            error_msg = f"Failed to update .env file: {str(e)}"
+            logging.error(error_msg)
+            messagebox.showerror("Error", error_msg)
     
     def browse_file(self):
         filetypes = [
