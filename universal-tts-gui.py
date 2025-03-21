@@ -13,13 +13,18 @@ import json
 import datetime
 import asyncio
 
-# Aggiungiamo il supporto per il sistema di credenziali
+# Add support for system credential manager
 try:
     import keyring
     import getpass
     KEYRING_AVAILABLE = True
+    # Define SERVICE_NAME and USERNAME globally
+    SERVICE_NAME = "OpenAI-TTS-App"
+    USERNAME = getpass.getuser()
 except ImportError:
     KEYRING_AVAILABLE = False
+    SERVICE_NAME = None
+    USERNAME = None
     logging.warning("keyring package not available. Install with: pip install keyring")
 
 # Load .env file
@@ -29,10 +34,10 @@ class UniversalTTSApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Universal TTS")
-        self.root.geometry("900x800")  # Dimensione iniziale più grande
+        self.root.geometry("900x800")  # Larger initial size
         self.root.minsize(800, 700)   
         
-        # Modifica inizializzazione della API key per usare il keyring se disponibile
+        # Initialize API key using keyring if available
         self.api_key = self.get_api_key_from_sources()
         self.client = None
         self.async_client = None
@@ -48,15 +53,15 @@ class UniversalTTSApp:
         self.style.configure('TButton', font=('Arial', 11))
         self.style.configure('TLabel', font=('Arial', 11))
         
-        # Stili migliorati per i bottoni
+        # Improved button styles
         self.style.configure('Preview.TButton', 
                             font=('Arial', 10))
         
-        # Stile per il bottone di generazione - più visibile
+        # Style for generation button - more visible
         self.style.configure('Big.TButton', 
                             font=('Arial', 11, 'bold'))
         
-        # Frame per contenere il bottone colorato personalizzato
+        # Create UI elements
         self.create_widgets()
         
     def setup_logging(self):
@@ -170,7 +175,7 @@ class UniversalTTSApp:
         model_dropdown = ttk.Combobox(voice_frame, textvariable=self.model_var, values=model_options, width=15, state="readonly")
         model_dropdown.grid(row=0, column=3, sticky=tk.W, padx=5, pady=5)
         
-        # Voice instructions - modify to span full width
+        # Voice instructions - set to span full width
         instructions_label = ttk.Label(voice_frame, text="Voice instructions:")
         instructions_label.grid(row=1, column=0, sticky=tk.NW, padx=5, pady=5)
         
@@ -199,17 +204,17 @@ class UniversalTTSApp:
         output_browse = ttk.Button(output_frame, text="Browse", command=self.browse_output_folder)
         output_browse.pack(side=tk.LEFT, padx=(0, 5))
         
-        # Preview frame - NEW
+        # Preview frame
         preview_btn_frame = ttk.Frame(main_frame)
         preview_btn_frame.pack(fill=tk.X, padx=10, pady=2)
         
-        # Contenitore centrale per il bottone di anteprima
+        # Center container for preview button
         center_preview_frame = ttk.Frame(preview_btn_frame)
-        center_preview_frame.pack(pady=2)  # Centrato orizzontalmente
+        center_preview_frame.pack(pady=2)  # Horizontally centered
         
         preview_button = tk.Button(
             center_preview_frame, 
-            text="▶ Anteprima Audio",
+            text="▶ Audio Preview",
             command=self.preview_audio,
             font=('Arial', 10),
             background='#1976D2',
@@ -221,7 +226,7 @@ class UniversalTTSApp:
             padx=10,
             pady=2
         )
-        preview_button.pack(padx=5, pady=2)  # Non più fill=tk.X
+        preview_button.pack(padx=5, pady=2)
         
         # Status frame
         status_frame = ttk.Frame(main_frame)
@@ -234,17 +239,17 @@ class UniversalTTSApp:
         self.progress_bar = ttk.Progressbar(status_frame, mode='indeterminate')
         self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         
-        # Generate button - bottone più compatto e centrato
+        # Generate button - compact and centered
         generate_button_frame = ttk.Frame(main_frame)
         generate_button_frame.pack(fill=tk.X, padx=20, pady=5)
         
-        # Contenitore centrale per il bottone genera
+        # Center container for generate button
         center_generate_frame = ttk.Frame(generate_button_frame)
-        center_generate_frame.pack(pady=2)  # Centrato orizzontalmente
+        center_generate_frame.pack(pady=2)  # Horizontally centered
         
         generate_button = tk.Button(
             center_generate_frame,
-            text="GENERA FILE AUDIO",
+            text="GENERATE AUDIO FILE",
             command=self.generate_speech,
             font=('Arial', 11, 'bold'),
             background='#2E7D32',
@@ -253,20 +258,20 @@ class UniversalTTSApp:
             activeforeground='white',
             relief=tk.RAISED,
             borderwidth=2,
-            padx=20,  # Padding orizzontale più ampio
+            padx=20,  # Wider horizontal padding
             pady=5
         )
-        generate_button.pack(padx=5, pady=2)  # Non più fill=tk.X
+        generate_button.pack(padx=5, pady=2)
     
     def get_api_key_from_sources(self):
-        """Prova diverse fonti per ottenere l'API key in ordine di sicurezza."""
-        # 1. Prova prima con la variabile d'ambiente (più sicura)
+        """Try different sources to obtain API key in order of security."""
+        # 1. First try environment variable (more secure)
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
             logging.info("API key found in environment variable")
             return api_key
             
-        # 2. Prova con il sistema di credenziali del sistema operativo (se disponibile)
+        # 2. Try system credential manager if available
         if KEYRING_AVAILABLE:
             try:
                 api_key = keyring.get_password(SERVICE_NAME, USERNAME)
@@ -276,8 +281,8 @@ class UniversalTTSApp:
             except Exception as e:
                 logging.warning(f"Error accessing system credentials: {e}")
         
-        # 3. Fallback: prova con il file .env (meno sicuro)
-        # load_dotenv() è già stato chiamato all'inizio, quindi non serve ripeterlo qui
+        # 3. Fallback: try .env file (less secure)
+        # load_dotenv() was already called at the beginning
         
         logging.info("No API key found in any secure storage")
         return None    
@@ -285,73 +290,71 @@ class UniversalTTSApp:
     def update_api_key(self):
         new_key = self.api_entry.get().strip()
         if new_key:
-            # Aggiorna per la sessione corrente
+            # Update for current session
             os.environ["OPENAI_API_KEY"] = new_key
             self.api_key = new_key
             self.client = OpenAI(api_key=self.api_key)
             self.async_client = AsyncOpenAI(api_key=self.api_key)
             logging.info("API Key updated for current session")
             
-            # Versione semplificata con scelte esplicite
+            # Simplified version with explicit choices
             if KEYRING_AVAILABLE:
-                # Prima domanda: vuoi salvare la chiave per usi futuri?
+                # First question: do you want to save the key for future use?
                 save_choice = messagebox.askyesno(
-                    "Salvataggio API Key",
-                    "API Key aggiornata per questa sessione.\n\n"
-                    "Vuoi salvare la chiave per usi futuri?\n\n"
-                    "• SÌ = Salva per usi futuri\n"
-                    "• NO = Usa solo per questa sessione",
+                    "Save API Key",
+                    "API Key updated for this session.\n\n"
+                    "Do you want to save the key for future use?\n\n"
+                    "• YES = Save for future use\n"
+                    "• NO = Use only for this session",
                     icon=messagebox.QUESTION
                 )
                 
                 if save_choice:
-                    # Seconda domanda: quale metodo di salvataggio preferisci?
+                    # Second question: which storage method do you prefer?
                     secure_choice = messagebox.askyesno(
-                        "Metodo di Salvataggio",
-                        "Quale metodo di salvataggio preferisci?\n\n"
-                        "• SÌ = Salva nel gestore credenziali di sistema (consigliato)\n"
-                        "• NO = Salva in un file .env (meno sicuro)",
+                        "Storage Method",
+                        "Which storage method do you prefer?\n\n"
+                        "• YES = Save in system credential manager (recommended)\n"
+                        "• NO = Save in a .env file (less secure)",
                         icon=messagebox.QUESTION
                     )
                     
                     if secure_choice:
-                        # Salva nel gestore credenziali
+                        # Save to credential manager
                         try:
-                            SERVICE_NAME = "OpenAI-TTS-App"
-                            USERNAME = getpass.getuser()
                             keyring.set_password(SERVICE_NAME, USERNAME, new_key)
-                            messagebox.showinfo("Successo", 
-                                              "API Key salvata in modo sicuro nel gestore credenziali del sistema")
+                            messagebox.showinfo("Success", 
+                                              "API Key securely saved in system credential manager")
                         except Exception as e:
-                            messagebox.showerror("Errore", 
-                                               f"Impossibile salvare nel gestore credenziali: {e}")
+                            messagebox.showerror("Error", 
+                                               f"Could not save to credential manager: {e}")
                     else:
-                        # Salva in .env
+                        # Save to .env file
                         self._save_to_env_file(new_key)
                 else:
-                    # Solo sessione
-                    messagebox.showinfo("Successo", 
-                                      "API Key aggiornata solo per questa sessione")
+                    # Session only
+                    messagebox.showinfo("Success", 
+                                      "API Key updated for this session only")
             else:
-                # Versione semplificata senza keyring
+                # Simplified version without keyring
                 if messagebox.askyesno(
-                    "Salvataggio API Key",
-                    "API Key aggiornata per questa sessione.\n\n"
-                    "Vuoi salvare la chiave in un file .env per usi futuri?\n\n"
-                    "• SÌ = Salva nel file .env\n"
-                    "• NO = Usa solo per questa sessione\n\n"
-                    "Per una maggiore sicurezza, considera l'installazione del pacchetto 'keyring':\n"
+                    "Save API Key",
+                    "API Key updated for this session.\n\n"
+                    "Do you want to save the key in a .env file for future use?\n\n"
+                    "• YES = Save in .env file\n"
+                    "• NO = Use only for this session\n\n"
+                    "For better security, consider installing the 'keyring' package:\n"
                     "pip install keyring",
                     icon=messagebox.QUESTION
                 ):
                     self._save_to_env_file(new_key)
                 else:
-                    messagebox.showinfo("Successo", 
-                                      "API Key aggiornata solo per questa sessione")
+                    messagebox.showinfo("Success", 
+                                      "API Key updated for this session only")
             
             return True
         else:
-            messagebox.showerror("Errore", "Inserisci una API Key valida")
+            messagebox.showerror("Error", "Please enter a valid API Key")
             return False
     
     def _save_to_env_file(self, new_key):
@@ -381,7 +384,7 @@ class UniversalTTSApp:
                 with open(env_path, "w") as f:
                     f.write(f"OPENAI_API_KEY={new_key}\n")
             
-            # Tentare di rendere il file accessibile solo all'utente corrente
+            # Try to make the file accessible only to the current user
             try:
                 if os.name == 'nt':  # Windows
                     import subprocess
@@ -532,7 +535,7 @@ class UniversalTTSApp:
         logging.info(f"Audio preview parameters: {json.dumps(preview_params, indent=2)}")
         
         # Set status and progress bar
-        self.status_var.set("Riproducendo anteprima audio...")
+        self.status_var.set("Playing audio preview...")
         self.progress_bar.start()
         
         # Start preview in a separate thread to keep UI responsive
@@ -574,10 +577,10 @@ class UniversalTTSApp:
         self.progress_bar.stop()
         
         if success:
-            self.status_var.set("Anteprima completata")
+            self.status_var.set("Preview completed")
             logging.info("Audio preview completed successfully")
         else:
-            self.status_var.set("Errore nell'anteprima")
+            self.status_var.set("Error in preview")
             messagebox.showerror("Error", f"Failed to preview audio: {error_msg}")
             logging.error(f"Audio preview failed: {error_msg}")
     
