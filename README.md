@@ -18,14 +18,28 @@ python -m venv tts-venv
 ```
 
 ### 3. Install dependencies
+
+This project was developed with Python 3.12.6. You can install all required dependencies using:
+
 ```bash
-pip install openai python-dotenv python-docx pymupdf
+pip install openai==1.68.2 python-dotenv==1.0.1 python-docx==1.1.2 PyMuPDF==1.25.4 sounddevice==0.5.1 keyring==25.6.0
 ```
 
-For the GUI version, also install:
+Or create a `requirements.txt` file with these dependencies and run:
+
 ```bash
-pip install tkinter asyncio
+pip install -r requirements.txt
 ```
+
+The application uses the following main libraries:
+- openai: OpenAI API client for text-to-speech
+- python-dotenv: For loading API keys from .env files
+- python-docx: For reading .docx files
+- PyMuPDF: For reading PDF files
+- sounddevice: For audio preview functionality
+- keyring: For secure API key storage (optional)
+
+Note: The GUI uses tkinter which is included in the Python standard library. On some Linux distributions, you might need to install it separately.
 
 ### 4. Add your OpenAI API key
 Create a `.env` file in the root directory with the following content:
