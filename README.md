@@ -1,5 +1,7 @@
 # Universal Text-to-Speech (TTS) Script
 
+![Python](https://img.shields.io/badge/python-3.12-blue) ![OpenAI API](https://img.shields.io/badge/OpenAI-TTS-orange) ![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 This project converts text files into lifelike speech audio using OpenAI's text-to-speech API.
 It supports `.txt`, `.docx`, and `.pdf` input files and generates `.mp3` audio files.
 
@@ -103,6 +105,11 @@ You can preview them at [openai.fm](https://openai.fm)
 
 ## 📂 Output
 All generated audio files will be saved in the `output/` folder with the same name as the input file.
+
+---
+
+## 📜 License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
