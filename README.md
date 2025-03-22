@@ -51,7 +51,7 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 If it doesn't exist, manually create a folder named `input/` in the root directory.  
 Then place your `.txt`, `.docx`, or `.pdf` files inside it.
 
-### 6. (Optional) Add voice instructions
+### 6. Add voice instructions
 Create a file named `instructions.txt` with the desired style, e.g.:
 ```
 Speak like a calm narrator with a British accent and a slightly poetic rhythm.
@@ -97,7 +97,7 @@ The graphical interface allows you to:
 - Easily manage your API key
 - Select output folder
 
-![image](https://github.com/user-attachments/assets/487d14d1-b6cf-4a23-8298-ad2af847793d)
+![image](https://github.com/user-attachments/assets/6df3632f-f938-43e2-8f53-65bca0727217)
 
 ---
 
