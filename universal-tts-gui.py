@@ -18,7 +18,6 @@ try:
     import keyring
     import getpass
     KEYRING_AVAILABLE = True
-    # Define SERVICE_NAME and USERNAME globally
     SERVICE_NAME = "OpenAI-TTS-App"
     USERNAME = getpass.getuser()
 except ImportError:
@@ -30,12 +29,25 @@ except ImportError:
 # Load .env file
 load_dotenv()
 
-class UniversalTTSApp:
+class ScrollableUniversalTTSApp:
+    
     def __init__(self, root):
         self.root = root
-        self.root.title("Universal TTS")
-        self.root.geometry("900x800")  # Larger initial size
-        self.root.minsize(800, 700)   
+        self.root.title("Universal-TTS")  
+        self.root.geometry("900x700")
+        self.root.minsize(800, 550)
+        
+        # Set app theme colors
+        self.colors = {
+            "primary": "#1976D2",  # Main blue color
+            "primary_dark": "#0D47A1",
+            "accent": "#2E7D32",   # Green for action buttons
+            "accent_dark": "#1B5E20",
+            "bg_light": "#F5F5F5",
+            "bg_dark": "#E0E0E0",
+            "text": "#212121",
+            "text_secondary": "#757575"
+        }
         
         # Initialize API key using keyring if available
         self.api_key = self.get_api_key_from_sources()
@@ -48,22 +60,257 @@ class UniversalTTSApp:
         # Setup logging
         self.setup_logging()
         
+        # Define voice details
+        self.common_voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+        self.special_voices = ["ash", "ballad", "coral", "sage", "verse"]
+        
+        # Voice-model compatibility map
+        self.voice_model_map = {
+            "gpt-4o-mini-tts": self.common_voices + self.special_voices,
+            "tts-1": self.common_voices + ["ash", "coral", "sage"],
+            "tts-1-hd": self.common_voices + ["ash", "coral", "sage"]
+        }
+        
+        # To track the source of the API key
+        self.api_key_source = None
+        
         # Set style
         self.style = ttk.Style()
         self.style.configure('TButton', font=('Arial', 11))
         self.style.configure('TLabel', font=('Arial', 11))
         
-        # Improved button styles
-        self.style.configure('Preview.TButton', 
-                            font=('Arial', 10))
+        # Create the main layout with scrolling
+        self.create_layout()
+
+    def show_settings_dialog(self):
+        """Show a settings dialog with API key management"""
+        # Create a modal dialog
+        settings_dialog = tk.Toplevel(self.root)
+        settings_dialog.title("Config API Key")
+        settings_dialog.transient(self.root)
+        settings_dialog.grab_set()
         
-        # Style for generation button - more visible
-        self.style.configure('Big.TButton', 
-                            font=('Arial', 11, 'bold'))
+        # Set dialog size - ridotta a dimensioni più compatte
+        settings_dialog.geometry("500x320")  
+        settings_dialog.minsize(500, 320)  
+        settings_dialog.resizable(True, True)
         
-        # Create UI elements
-        self.create_widgets()
+        # Create dialog content
+        content_frame = ttk.Frame(settings_dialog, padding="15")
+        content_frame.pack(fill=tk.BOTH, expand=True)
         
+        # API Key section
+        api_frame = ttk.LabelFrame(content_frame, text="OpenAI API Key", padding="8")
+        api_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        key_label_text = "Your API key is securely stored"
+        if self.api_key_source:
+            key_label_text += f" in {self.api_key_source}"
+        key_label_text += ". You can update it below:"
+        
+        key_label = ttk.Label(api_frame, text=key_label_text, font=('Segoe UI', 9))
+        key_label.pack(anchor=tk.W, pady=(0, 5))
+        
+        key_entry_frame = ttk.Frame(api_frame)
+        key_entry_frame.pack(fill=tk.X)
+        
+        self.api_entry = ttk.Entry(key_entry_frame, show="•", width=45)
+        if self.api_key:
+            # Show only last 4 chars of actual key for reference
+            masked_key = "•" * 20 + self.api_key[-4:] if len(self.api_key) > 4 else self.api_key
+            self.api_entry.insert(0, masked_key)
+        self.api_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        show_key_var = tk.BooleanVar(value=False)
+        
+        def toggle_key_visibility():
+            if show_key_var.get():
+                self.api_entry.config(show="")
+                if self.api_key and "•" in self.api_entry.get():
+                    # Replace masked key with actual key
+                    self.api_entry.delete(0, tk.END)
+                    self.api_entry.insert(0, self.api_key)
+            else:
+                self.api_entry.config(show="•")
+        
+        show_key_check = ttk.Checkbutton(
+            key_entry_frame, 
+            text="Show", 
+            variable=show_key_var,
+            command=toggle_key_visibility
+        )
+        show_key_check.pack(side=tk.LEFT)
+        
+        key_note = ttk.Label(
+            api_frame, 
+            text="Note: Your API key is used to access OpenAI's text-to-speech services", 
+            font=('Segoe UI', 8, 'italic'),
+            foreground=self.colors["text_secondary"]
+        )
+        key_note.pack(anchor=tk.W, pady=(3, 0))
+        
+        # Storage options
+        storage_frame = ttk.LabelFrame(content_frame, text="Storage Options", padding="8")
+        storage_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        storage_var = tk.StringVar(value="system" if KEYRING_AVAILABLE else "env")
+        
+        system_radio = ttk.Radiobutton(
+            storage_frame, 
+            text="Store in system credential manager (recommended)", 
+            variable=storage_var, 
+            value="system"
+        )
+        system_radio.pack(anchor=tk.W, pady=1)
+        
+        env_radio = ttk.Radiobutton(
+            storage_frame, 
+            text="Store in .env file", 
+            variable=storage_var, 
+            value="env"
+        )
+        env_radio.pack(anchor=tk.W, pady=1)
+        
+        session_radio = ttk.Radiobutton(
+            storage_frame, 
+            text="Use for this session only", 
+            variable=storage_var, 
+            value="session"
+        )
+        session_radio.pack(anchor=tk.W, pady=1)
+        
+        # Disable system option if not available
+        if not KEYRING_AVAILABLE:
+            system_radio.config(state="disabled")
+            key_note = ttk.Label(
+                storage_frame, 
+                text="System credential storage unavailable. Install 'keyring' package for enhanced security.", 
+                font=('Segoe UI', 8, 'italic'),
+                foreground=self.colors["text_secondary"]
+            )
+            key_note.pack(anchor=tk.W, pady=(3, 0))
+        
+        # Buttons
+        button_frame = ttk.Frame(content_frame)
+        button_frame.pack(fill=tk.X, pady=(8, 0))
+        
+        cancel_button = ttk.Button(
+            button_frame, 
+            text="Cancel", 
+            command=settings_dialog.destroy
+        )
+        cancel_button.pack(side=tk.RIGHT, padx=(10, 0))
+        
+        save_button = ttk.Button(
+            button_frame, 
+            text="Save API Key", 
+            style="Primary.TButton",
+            command=lambda: self.save_api_key(
+                self.api_entry.get().strip(), 
+                storage_var.get(),
+                settings_dialog
+            )
+        )
+        save_button.pack(side=tk.RIGHT)
+        
+        self._center_dialog(settings_dialog)
+    
+    def save_api_key(self, key, storage_method, dialog):
+        """Save API key with the selected storage method"""
+        if not key:
+            messagebox.showerror("Error", "Please enter a valid API Key", parent=dialog)
+            return
+        
+        # Remove any placeholder chars if present
+        if "•" in key:
+            # User didn't change the masked display
+            if self.api_key:
+                # Keep using existing key
+                key = self.api_key
+            else:
+                messagebox.showerror("Error", "Please enter a valid API Key", parent=dialog)
+                return
+        
+        # Update for current session
+        os.environ["OPENAI_API_KEY"] = key
+        self.api_key = key
+        self.client = OpenAI(api_key=self.api_key)
+        self.async_client = AsyncOpenAI(api_key=self.api_key)
+        
+        # Store based on selected method
+        if storage_method == "system" and KEYRING_AVAILABLE:
+            try:
+                keyring.set_password(SERVICE_NAME, USERNAME, key)
+                messagebox.showinfo("Success", "API Key securely saved in system credential manager", parent=dialog)
+                self.api_key_source = "system credential manager"
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not save to credential manager: {e}", parent=dialog)
+        
+        elif storage_method == "env":
+            try:
+                env_path = Path(".env")
+                
+                # If .env exists, read and update it
+                if env_path.exists():
+                    with open(env_path, "r") as f:
+                        lines = f.readlines()
+                    
+                    found = False
+                    for i, line in enumerate(lines):
+                        if line.startswith("OPENAI_API_KEY="):
+                            lines[i] = f"OPENAI_API_KEY={key}\n"
+                            found = True
+                            break
+                    
+                    if not found:
+                        lines.append(f"OPENAI_API_KEY={key}\n")
+                    
+                    with open(env_path, "w") as f:
+                        f.writelines(lines)
+                else:
+                    # Create new .env file
+                    with open(env_path, "w") as f:
+                        f.write(f"OPENAI_API_KEY={key}\n")
+                
+                messagebox.showinfo("Success", "API Key saved to .env file", parent=dialog)
+                self.api_key_source = ".env file"
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to update .env file: {e}", parent=dialog)
+        
+        elif storage_method == "session":
+            messagebox.showinfo("Success", "API Key updated for this session only", parent=dialog)
+            self.api_key_source = "current session only"
+        
+        # Close the dialog
+        dialog.destroy()
+
+    def _toggle_api_key_visibility(self):
+        """Toggle showing or hiding the API key"""
+        if self.show_key_var.get():
+            self.api_entry.config(show="")
+        else:
+            self.api_entry.config(show="*")
+
+    def _center_dialog(self, dialog):
+        """Center a dialog on its parent window"""
+        dialog.update_idletasks()
+        
+        # Get parent and dialog dimensions
+        parent_width = self.root.winfo_width()
+        parent_height = self.root.winfo_height()
+        parent_x = self.root.winfo_rootx()
+        parent_y = self.root.winfo_rooty()
+        
+        dialog_width = dialog.winfo_width()
+        dialog_height = dialog.winfo_height()
+        
+        # Calculate position
+        x = parent_x + (parent_width - dialog_width) // 2
+        y = parent_y + (parent_height - dialog_height) // 2
+        
+        # Set position
+        dialog.geometry(f"+{x}+{y}")
+    
     def setup_logging(self):
         """Setup logging to file with enhanced error checking"""
         try:
@@ -78,7 +325,6 @@ class UniversalTTSApp:
                 print(f"Logs directory: {logs_dir.absolute()} {'exists' if logs_dir.exists() else 'creation failed'}")
             except Exception as dir_err:
                 print(f"Error creating logs directory: {dir_err}")
-                # Fallback to current directory
                 logs_dir = Path(".")
             
             # Create a log file with timestamp in name
@@ -94,7 +340,6 @@ class UniversalTTSApp:
                 print(f"Log file created successfully: {log_file}")
             except Exception as file_err:
                 print(f"Cannot write to log file: {file_err}")
-                # Try a different location
                 log_file = Path(f"./tts_log_{timestamp}.log")
                 try:
                     with open(log_file, 'w') as f:
@@ -131,7 +376,6 @@ class UniversalTTSApp:
             logging.info(f"Python version: {os.sys.version}")
             logging.info(f"Operating system: {os.name} - {os.sys.platform}")
             
-            # Print confirmation to console
             print(f"Logging to: {log_file}")
             return True
             
@@ -145,32 +389,150 @@ class UniversalTTSApp:
             print("Fallback to console logging only")
             return False
     
-    def create_widgets(self):
-        # Main frame
+    def create_layout(self):
+        """Create the main layout with scrollable content and fixed controls"""
+        # Main container - using grid for better control
+        self.root.grid_rowconfigure(0, weight=1)  # Content area expands
+        self.root.grid_rowconfigure(1, weight=0)  # Fixed height for bottom controls
+        self.root.grid_columnconfigure(0, weight=1)  # Full width
+        
+        # Create main frame that will contain the scrollable content
         main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame.grid(row=0, column=0, sticky="nsew")
         
-        # Title
-        title_label = ttk.Label(main_frame, text="Universal Text-to-Speech", font=('Arial', 14, 'bold'))
-        title_label.pack(pady=5)
+        # Header row with title and API Key button
+        header_frame = ttk.Frame(main_frame)
+        header_frame.pack(fill=tk.X, pady=(0, 5))
         
-        # API Key frame
-        api_frame = ttk.LabelFrame(main_frame, text="OpenAI API Key", padding="5")
-        api_frame.pack(fill=tk.X, padx=5, pady=3)
+        # Title area 
+        title_frame = ttk.Frame(header_frame)
+        title_frame.pack(fill=tk.X)
+        title_frame.columnconfigure(0, weight=1)  # Make title expand
         
-        api_row = ttk.Frame(api_frame)
-        api_row.pack(fill=tk.X)
+        # Title label with new app name
+        title_label = ttk.Label(title_frame, text="Universal-TTS   AI Voice", font=('Segoe UI', 12, 'bold'))
+        title_label.grid(row=0, column=0, sticky="w")
         
-        self.api_entry = ttk.Entry(api_row, show="*", width=50)
-        if self.api_key:
-            self.api_entry.insert(0, self.api_key)
-        self.api_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        # Settings button
+        settings_button = tk.Button(
+            title_frame, 
+            text="⚙️ Config API Key",
+            command=self.show_settings_dialog,
+            font=('Segoe UI', 10),
+            background=self.colors["primary"],
+            foreground="white",
+            activebackground=self.colors["primary_dark"],
+            activeforeground="white",
+            relief=tk.RAISED,
+            borderwidth=1,
+            padx=10,
+            pady=2,
+            cursor="hand2"
+        )
+        settings_button.grid(row=0, column=1, sticky="e", padx=(10, 20))
         
-        api_button = ttk.Button(api_row, text="Update API Key", command=self.update_api_key)
-        api_button.pack(side=tk.RIGHT)
+        # Create scrollable frame for main content
+        canvas_frame = ttk.Frame(main_frame)
+        canvas_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
+        # Create canvas with scrollbar
+        self.canvas = tk.Canvas(canvas_frame, bg=self.colors["bg_light"])
+        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
+        
+        # Configure scrolling
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+        
+        # Make the scrollable frame resize with the canvas width
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
+        
+        # Create a window into the canvas
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        
+        # Configure canvas and scrollbar
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Add content to the scrollable frame
+        self.create_scrollable_content()
+        
+        # Bottom controls in a fixed frame
+        self.bottom_frame = ttk.Frame(self.root, padding="10")
+        self.bottom_frame.grid(row=1, column=0, sticky="ew")
+
+        # Configure columns for flexible layout
+        self.bottom_frame.columnconfigure(0, weight=1)  # Spazio flessibile a sinistra
+        self.bottom_frame.columnconfigure(1, weight=2)  # Status al centro (più largo)
+        self.bottom_frame.columnconfigure(2, weight=1)  # Spazio flessibile a destra
+
+        # Status and buttons
+        status_frame = ttk.Frame(self.bottom_frame)
+        status_frame.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+
+        self.status_var = tk.StringVar(value="Ready")
+        # Status label
+        status_label = ttk.Label(status_frame, textvariable=self.status_var, font=('Arial', 9))
+        status_label.pack(side=tk.LEFT, padx=(0, 10))
+
+        # Progress bar
+        self.progress_bar = ttk.Progressbar(status_frame, mode='indeterminate', length=80)
+        self.progress_bar.pack(side=tk.LEFT)
+
+        # Buttons on the right
+        buttons_frame = ttk.Frame(self.bottom_frame)
+        buttons_frame.grid(row=0, column=2, sticky="e")
+        
+        # Preview button
+        preview_button = tk.Button(
+            buttons_frame, 
+            text="▶ Preview Audio",
+            command=self.preview_audio,
+            font=('Arial', 10),
+            background=self.colors["primary"],
+            foreground='white',
+            activebackground=self.colors["primary_dark"],
+            activeforeground='white',
+            relief=tk.RAISED,
+            borderwidth=2,
+            padx=10,  
+            pady=5,
+            cursor="hand2",
+            width=12  
+        )
+        preview_button.pack(side=tk.LEFT, padx=(0, 25))
+        
+        # Generate button
+        generate_button = tk.Button(
+            buttons_frame,
+            text="GENERATE AUDIO FILE",
+            command=self.generate_speech,
+            font=('Arial', 10, 'bold'),
+            background=self.colors["accent"],
+            foreground='white',
+            activebackground=self.colors["accent_dark"],
+            activeforeground='white',
+            relief=tk.RAISED,
+            borderwidth=2,
+            padx=10,  
+            pady=5,
+            cursor="hand2",
+            width=18
+        )
+        generate_button.pack(side=tk.RIGHT, padx=(0, 20))
+    
+    def on_canvas_configure(self, event):
+        """Adjust the width of the scrollable frame when the canvas changes size"""
+        canvas_width = event.width
+        self.canvas.itemconfig(self.canvas_window, width=canvas_width)
+    
+    def create_scrollable_content(self):
+        """Create all the content that goes in the scrollable area"""
         # Input method tabs
-        self.tab_control = ttk.Notebook(main_frame)
+        self.tab_control = ttk.Notebook(self.scrollable_frame)
         self.tab_control.pack(fill=tk.BOTH, expand=True, pady=5)
         
         # Tab 1: Direct Text Input
@@ -182,7 +544,6 @@ class UniversalTTSApp:
         
         self.text_input = scrolledtext.ScrolledText(text_tab, height=10)
         self.text_input.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-
         self.text_input.insert(tk.END, "Welcome to the Universal Text-to-Speech tool. This is a simple example of what you can create with OpenAI's speech synthesis API. You can customize the voice, tone, and style to suit your needs.")
         
         # Tab 2: File Input
@@ -208,22 +569,11 @@ class UniversalTTSApp:
         self.file_preview = scrolledtext.ScrolledText(preview_frame, height=8)
         self.file_preview.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # Voice options frame
-        voice_frame = ttk.LabelFrame(main_frame, text="Voice Options", padding="10")
+        # Voice options frame with grid layout
+        voice_frame = ttk.LabelFrame(self.scrollable_frame, text="Voice Options", padding="10")
         voice_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        # Distinguish between common voices and special voices that need an asterisk
-        self.common_voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
-        self.special_voices = ["ash", "ballad", "coral", "sage", "verse"]  # Voci da contrassegnare con asterisco
-        
-        # Voice-model compatibility map (aggiornata in base alla tua correzione)
-        self.voice_model_map = {
-            "gpt-4o-mini-tts": self.common_voices + self.special_voices,
-            "tts-1": self.common_voices + ["ash", "coral", "sage"],  # Ash, Coral e Sage sono supportate anche da tts-1
-            "tts-1-hd": self.common_voices + ["ash", "coral", "sage"]  # Ash, Coral e Sage sono supportate anche da tts-1-hd
-        }
-
-        # Voice selection - ridotto padding tra label e dropdown
+        # Voice selection
         voice_label = ttk.Label(voice_frame, text="Voice:")
         voice_label.grid(row=0, column=0, sticky=tk.W, padx=(5, 0), pady=5)
 
@@ -237,9 +587,9 @@ class UniversalTTSApp:
         
         self.voice_var = tk.StringVar(value="alloy")  # Default voice
         self.voice_dropdown = ttk.Combobox(voice_frame, textvariable=self.voice_var, values=voice_display_options, width=15, state="readonly")
-        self.voice_dropdown.grid(row=0, column=1, sticky=tk.W, padx=(0, 5), pady=5) 
+        self.voice_dropdown.grid(row=0, column=0, sticky=tk.W, padx=(60, 5), pady=5) 
         
-        # Add note about special voices directly under the Voice dropdown
+        # Add note about special voices
         voice_special_note = ttk.Label(voice_frame, text="* = Special voices with enhanced capabilities", 
                                 font=('Arial', 8, 'italic'), foreground='#666666')
         voice_special_note.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=5, pady=(0, 5))
@@ -250,10 +600,8 @@ class UniversalTTSApp:
 
         self.model_var = tk.StringVar(value="gpt-4o-mini-tts")
         model_options = ["gpt-4o-mini-tts", "tts-1", "tts-1-hd"]
-        model_dropdown = ttk.Combobox(voice_frame, textvariable=self.model_var, values=model_options, width=15, state="readonly")
+        model_dropdown = ttk.Combobox(voice_frame, textvariable=self.model_var, values=model_options, width=17, state="readonly")
         model_dropdown.grid(row=0, column=3, sticky=tk.W, padx=5, pady=5)
-        
-        # Bind the model dropdown to update voice options when changed
         model_dropdown.bind("<<ComboboxSelected>>", self.update_voice_options)
 
         # Format selection
@@ -265,42 +613,40 @@ class UniversalTTSApp:
         format_dropdown = ttk.Combobox(voice_frame, textvariable=self.format_var, values=format_options, width=8, state="readonly")
         format_dropdown.grid(row=0, column=5, sticky=tk.W, padx=5, pady=5)
 
-        # Speed selection with note that it works only with tts-1 and tts-1-hd
+        # Speed selection
         speed_label = ttk.Label(voice_frame, text="Speed:")
-        speed_label.grid(row=0, column=6, sticky=tk.W, padx=(5, 0), pady=5)  # Ridotto padding a destra (0)
+        speed_label.grid(row=0, column=6, sticky=tk.W, padx=(5, 0), pady=5)
 
-        self.speed_var = tk.StringVar(value="1.0")
+        self.speed_var = tk.StringVar(value="1.00")
         speed_options = ["0.25", "0.50", "0.75", "0.85", "0.90", "0.95", "1.00", "1.05", "1.10", "1.15", "1.20", "1.25", "1.50", "1.75", "2.00", "3.00", "4.00"]
         speed_dropdown = ttk.Combobox(voice_frame, textvariable=self.speed_var, values=speed_options, width=5, state="readonly")
-        speed_dropdown.grid(row=0, column=7, sticky=tk.W, padx=(0, 5), pady=5)
+        speed_dropdown.grid(row=0, column=6, sticky=tk.W, padx=(70, 5), pady=5)
         
-        # Add note about speed compatibility directly under the Speed dropdown
+        # Add note about speed compatibility
         speed_note = ttk.Label(voice_frame, text="Speed only works with tts-1 and tts-1-hd models", 
                             font=('Arial', 8, 'italic'), foreground='#666666')
         speed_note.grid(row=1, column=6, columnspan=2, sticky=tk.W, padx=5, pady=(0, 5))
         
-        # Voice instructions - set to span full width (including left margin)
+        # Configure voice_frame columns to properly distribute space
+        voice_frame.columnconfigure(0, weight=0)  
+        voice_frame.columnconfigure(1, weight=1)  
+        voice_frame.columnconfigure(2, weight=0)  
+        voice_frame.columnconfigure(3, weight=1)  
+        voice_frame.columnconfigure(4, weight=0)  
+        voice_frame.columnconfigure(5, weight=0)  
+        voice_frame.columnconfigure(6, weight=0)  
+        voice_frame.columnconfigure(7, weight=0)  
+        
+        # Voice instructions
         instructions_label = ttk.Label(voice_frame, text="Voice instructions:")
         instructions_label.grid(row=2, column=0, sticky=tk.NW, padx=5, pady=5)
         
-        # Configure voice_frame columns to properly distribute space
-        voice_frame.columnconfigure(0, weight=0)  # Label column doesn't need to expand
-        voice_frame.columnconfigure(1, weight=1)  # Voice dropdown
-        voice_frame.columnconfigure(2, weight=0)  # Model label
-        voice_frame.columnconfigure(3, weight=1)  # Model dropdown
-        voice_frame.columnconfigure(4, weight=0)  # Format label
-        voice_frame.columnconfigure(5, weight=0)  # Format dropdown
-        voice_frame.columnconfigure(6, weight=0)  # Speed label
-        voice_frame.columnconfigure(7, weight=0)  # Speed dropdown
-        voice_frame.columnconfigure(8, weight=0)  # Speed note
-        
-        # ScrolledText directly in the frame spanning all columns for maximum width (spostato alla riga 2 a causa delle note aggiunte)
         self.instructions_text = scrolledtext.ScrolledText(voice_frame, height=6, wrap=tk.WORD)
-        self.instructions_text.grid(row=2, column=0, columnspan=9, sticky=tk.NSEW, padx=5, pady=5)
+        self.instructions_text.grid(row=2, column=0, columnspan=8, sticky=tk.NSEW, padx=5, pady=5)
         self.instructions_text.insert(tk.END, "Speak clearly, with a warm and narrative tone.")
         
         # Output options
-        output_frame = ttk.LabelFrame(main_frame, text="Output Options", padding="10")
+        output_frame = ttk.LabelFrame(self.scrollable_frame, text="Output Options", padding="10")
         output_frame.pack(fill=tk.X, padx=5, pady=5)
         
         output_path_label = ttk.Label(output_frame, text="Output folder:")
@@ -312,66 +658,7 @@ class UniversalTTSApp:
         
         output_browse = ttk.Button(output_frame, text="Browse", command=self.browse_output_folder)
         output_browse.pack(side=tk.LEFT, padx=(0, 5))
-        
-        # Preview frame
-        preview_btn_frame = ttk.Frame(main_frame)
-        preview_btn_frame.pack(fill=tk.X, padx=10, pady=2)
-        
-        # Center container for preview button
-        center_preview_frame = ttk.Frame(preview_btn_frame)
-        center_preview_frame.pack(pady=2)  # Horizontally centered
-        
-        preview_button = tk.Button(
-            center_preview_frame, 
-            text="▶ Audio Preview",
-            command=self.preview_audio,
-            font=('Arial', 10),
-            background='#1976D2',
-            foreground='white',
-            activebackground='#2196F3',
-            activeforeground='white',
-            relief=tk.RAISED,
-            borderwidth=2,
-            padx=10,
-            pady=2
-        )
-        preview_button.pack(padx=5, pady=2)
-        
-        # Status frame
-        status_frame = ttk.Frame(main_frame)
-        status_frame.pack(fill=tk.X, padx=5, pady=10)
-        
-        self.status_var = tk.StringVar(value="Ready")
-        status_label = ttk.Label(status_frame, textvariable=self.status_var)
-        status_label.pack(side=tk.LEFT)
-        
-        self.progress_bar = ttk.Progressbar(status_frame, mode='indeterminate')
-        self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        
-        # Generate button - compact and centered
-        generate_button_frame = ttk.Frame(main_frame)
-        generate_button_frame.pack(fill=tk.X, padx=20, pady=5)
-        
-        # Center container for generate button
-        center_generate_frame = ttk.Frame(generate_button_frame)
-        center_generate_frame.pack(pady=2)  # Horizontally centered
-        
-        generate_button = tk.Button(
-            center_generate_frame,
-            text="GENERATE AUDIO FILE",
-            command=self.generate_speech,
-            font=('Arial', 11, 'bold'),
-            background='#2E7D32',
-            foreground='white',
-            activebackground='#388E3C',
-            activeforeground='white',
-            relief=tk.RAISED,
-            borderwidth=2,
-            padx=20,  # Wider horizontal padding
-            pady=5
-        )
-        generate_button.pack(padx=5, pady=2)
-
+    
     def update_voice_options(self, event=None):
         """Update voice dropdown options based on selected model"""
         selected_model = self.model_var.get()
@@ -390,7 +677,7 @@ class UniversalTTSApp:
         display_options = []
         for voice in available_voices:
             if voice in self.special_voices:
-                display_options.append(f"{voice} *")  # Aggiungi asterisco per voci speciali
+                display_options.append(f"{voice} *")  # Add asterisk for special voices
             else:
                 display_options.append(voice)
         
@@ -417,7 +704,7 @@ class UniversalTTSApp:
     
     def get_api_key_from_sources(self):
         """Try different sources to obtain API key in order of security."""
-        # 1. First try environment variable (more secure)
+        # 1. First try environment variable
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
             logging.info("API key found in environment variable")
@@ -437,9 +724,10 @@ class UniversalTTSApp:
         # load_dotenv() was already called at the beginning
         
         logging.info("No API key found in any secure storage")
-        return None    
-
+        return None
+    
     def update_api_key(self):
+        """Update the API key and optionally save it for future use"""
         new_key = self.api_entry.get().strip()
         if new_key:
             # Update for current session
@@ -555,6 +843,7 @@ class UniversalTTSApp:
             messagebox.showerror("Error", error_msg)
     
     def browse_file(self):
+        """Browse for input file"""
         filetypes = [
             ("Text files", "*.txt"),
             ("Word documents", "*.docx"),
@@ -568,6 +857,7 @@ class UniversalTTSApp:
             self.load_file_preview(file_path)
     
     def browse_output_folder(self):
+        """Browse for output folder"""
         folder_path = filedialog.askdirectory()
         if folder_path:
             self.output_path_var.set(folder_path)
@@ -576,6 +866,7 @@ class UniversalTTSApp:
             Path(folder_path).mkdir(exist_ok=True)
     
     def load_file_preview(self, file_path):
+        """Load and display preview of selected file"""
         try:
             logging.info(f"Loading preview for file: {file_path}")
             text = self.read_input_file(Path(file_path))
@@ -731,9 +1022,12 @@ class UniversalTTSApp:
                 "model": model,
                 "voice": voice,
                 "input": text,
-                "instructions": instructions,
                 "response_format": "pcm"  # Keep pcm for preview
             }
+            
+            # Add instructions if provided
+            if instructions:
+                api_params["instructions"] = instructions
             
             # Add speed parameter only for compatible models
             if model in ["tts-1", "tts-1-hd"]:
@@ -763,6 +1057,7 @@ class UniversalTTSApp:
             logging.error(f"Audio preview failed: {error_msg}")
     
     def generate_speech(self):
+        """Generate speech and save to file"""
         logging.info("Starting speech generation process")
         if not self.client:
             logging.warning("No API client available, requesting API key")
@@ -791,13 +1086,16 @@ class UniversalTTSApp:
         # Get the format for the output file
         format = self.format_var.get()
         
+        # Generate timestamp for the filename
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
         if current_tab == 0:  # Text input tab
             text = self.text_input.get(1.0, tk.END).strip()
             if not text:
                 logging.warning("No text entered in text input tab")
                 messagebox.showerror("Error", "Please enter some text")
                 return
-            output_filename = f"text_input.{format}"  # Usa il formato selezionato invece di mp3 fisso
+            output_filename = f"speech_{voice}_{timestamp}.{format}"  # Include voice name and timestamp
             logging.info(f"Using direct text input, length: {len(text)} characters")
         else:  # File input tab
             file_path = self.file_path_var.get()
@@ -813,7 +1111,8 @@ class UniversalTTSApp:
                     logging.warning(f"File is empty or too short: {file_path}")
                     messagebox.showerror("Error", "File is empty or too short")
                     return
-                output_filename = Path(file_path).stem + f".{format}"  # Usa il formato selezionato
+                filename_base = Path(file_path).stem
+                output_filename = f"{filename_base}_{voice}_{timestamp}.{format}"  # Include file name, voice name and timestamp
                 logging.info(f"File read successfully, content length: {len(text)} characters")
             except Exception as e:
                 error_msg = f"Error reading file: {str(e)}"
@@ -827,7 +1126,8 @@ class UniversalTTSApp:
         output_file = output_dir / output_filename
         logging.info(f"Output will be saved to: {output_file}")
         
-        # Check if output file exists
+        # Since we're now using a timestamp, file should always be unique
+        # But we'll keep the check just in case
         if output_file.exists():
             logging.info(f"Output file already exists: {output_file}")
             if not messagebox.askyesno("File Exists", f"File {output_filename} already exists. Overwrite?"):
@@ -838,16 +1138,16 @@ class UniversalTTSApp:
         # Get voice options
         voice = self.voice_var.get()
         model = self.model_var.get()
-        format = self.format_var.get()  # Definisci il formato
-        speed = float(self.speed_var.get())  # Definisci la velocità
+        format = self.format_var.get()
+        speed = float(self.speed_var.get())
         instructions = self.instructions_text.get(1.0, tk.END).strip()
         
         # Log request parameters
         request_params = {
             "model": model,
             "voice": voice,
-            "format": format,    # Add format
-            "speed": speed,      # Add speed
+            "format": format,
+            "speed": speed,
             "instructions": instructions,
             "text_length": len(text),
             "text_preview": text[:100] + "..." if len(text) > 100 else text,
@@ -862,31 +1162,31 @@ class UniversalTTSApp:
         
         thread = threading.Thread(
             target=self._generate_speech_thread, 
-            args=(text, output_file, voice, model, instructions)
+            args=(text, output_file, voice, model, instructions, format, speed)
         )
         thread.daemon = True
         thread.start()
     
-    def _generate_speech_thread(self, text, output_file, voice, model, instructions):
+    def _generate_speech_thread(self, text, output_file, voice, model, instructions, format, speed):
+        """Run the speech generation in a separate thread"""
         try:
             logging.info("Making API request to OpenAI TTS service")
             
             if " *" in voice:
                 voice = voice.replace(" *", "")
             
-            # Get current format and speed values
-            format = self.format_var.get()
-            speed = float(self.speed_var.get())
-            
             # Create API parameters
             api_params = {
                 "model": model,
                 "voice": voice,
                 "input": text,
-                "instructions": instructions,
                 "response_format": format
             }
             
+            # Add instructions if provided
+            if instructions:
+                api_params["instructions"] = instructions
+                
             # Add speed parameter only for compatible models
             if model in ["tts-1", "tts-1-hd"]:
                 api_params["speed"] = speed
@@ -919,29 +1219,50 @@ class UniversalTTSApp:
             self.root.after(0, self._processing_complete, False, error_msg)
     
     def _processing_complete(self, success, result):
+        """Update UI after generation completes"""
         self.progress_bar.stop()
         
         if success:
-            msg = f"Audio saved to: {result}"
+            # Show only the filename (not the complete path)
+            file_name = os.path.basename(str(result))
+            msg = f"Saved: {file_name}"
             self.status_var.set(msg)
-            logging.info(msg)
-            messagebox.showinfo("Success", f"Audio generated successfully and saved to:\n{result}")
+            logging.info(f"Audio saved to: {result}")
             
-            # Ask if user wants to open the logs folder
-            if messagebox.askyesno("View Logs", "Would you like to open the logs folder to see the detailed request log?"):
-                logs_dir = Path("logs").absolute()
-                try:
-                    if os.name == 'nt':  # Windows
-                        os.startfile(logs_dir)
-                    elif os.name == 'posix':  # macOS or Linux
-                        import subprocess
-                        subprocess.Popen(['open', logs_dir] if os.sys.platform == 'darwin' else ['xdg-open', logs_dir])
-                    logging.info("Opened logs directory")
-                except Exception as e:
-                    error_msg = f"Could not open logs folder: {str(e)}"
-                    messagebox.showerror("Error", error_msg)
-                    logging.error(error_msg)
+            # Create a custom centered success dialog with smaller dimensions
+            info_dialog = tk.Toplevel(self.root)
+            info_dialog.title("Success")
+            info_dialog.transient(self.root)
+            info_dialog.grab_set()
+            
+            # Set size and properties - significantly reduced size
+            info_dialog.geometry("380x160")  # Reduced from 400x180
+            info_dialog.resizable(False, False)
+            
+            # Container frame with minimal padding
+            frame = ttk.Frame(info_dialog, padding=8)  # Reduced padding from 10 to 8
+            frame.pack(fill=tk.BOTH, expand=True)
+            
+            # Success message with slightly smaller font
+            ttk.Label(frame, text="Audio generated successfully!", 
+                     font=("Segoe UI", 10, "bold")).pack(pady=(2, 2))  # Minimal padding
+            
+            # Saved file path with minimal padding
+            ttk.Label(frame, text="Saved to:").pack(pady=(0, 1))  # Minimal padding
+            ttk.Label(frame, text=f"{result}", wraplength=360).pack(pady=(0, 8))  # Reduced padding and wrap width
+            
+            # OK button at the bottom with no extra space
+            button_frame = ttk.Frame(frame)
+            button_frame.pack(fill=tk.X, expand=False, pady=(0, 0))  # No bottom padding
+            
+            # OK button centered
+            ok_button = ttk.Button(button_frame, text="OK", command=info_dialog.destroy, width=8)
+            ok_button.pack(pady=(0, 0))  # No padding
+            
+            # Center the dialog relative to the main window
+            self._center_dialog(info_dialog)
         else:
+            # Error handling
             error_msg = f"Failed to generate audio: {result}"
             self.status_var.set("Error generating audio")
             logging.error(error_msg)
@@ -949,5 +1270,5 @@ class UniversalTTSApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = UniversalTTSApp(root)
+    app = ScrollableUniversalTTSApp(root)
     root.mainloop()
