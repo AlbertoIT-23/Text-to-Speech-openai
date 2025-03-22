@@ -465,9 +465,9 @@ class ScrollableUniversalTTSApp:
         self.bottom_frame.grid(row=1, column=0, sticky="ew")
 
         # Configure columns for flexible layout
-        self.bottom_frame.columnconfigure(0, weight=1)  # Spazio flessibile a sinistra
-        self.bottom_frame.columnconfigure(1, weight=2)  # Status al centro (più largo)
-        self.bottom_frame.columnconfigure(2, weight=1)  # Spazio flessibile a destra
+        self.bottom_frame.columnconfigure(0, weight=1)  
+        self.bottom_frame.columnconfigure(1, weight=2)  
+        self.bottom_frame.columnconfigure(2, weight=1)  
 
         # Status and buttons
         status_frame = ttk.Frame(self.bottom_frame)
