@@ -51,7 +51,7 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 If it doesn't exist, manually create a folder named `input/` in the root directory.  
 Then place your `.txt`, `.docx`, or `.pdf` files inside it.
 
-### 6. (Optional) Add voice instructions
+### 6. Add voice instructions
 Create a file named `instructions.txt` with the desired style, e.g.:
 ```
 Speak like a calm narrator with a British accent and a slightly poetic rhythm.
