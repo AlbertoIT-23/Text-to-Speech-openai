@@ -642,7 +642,7 @@ class ScrollableUniversalTTSApp:
         instructions_label.grid(row=2, column=0, sticky=tk.NW, padx=5, pady=5)
         
         self.instructions_text = scrolledtext.ScrolledText(voice_frame, height=6, wrap=tk.WORD)
-        self.instructions_text.grid(row=2, column=0, columnspan=8, sticky=tk.NSEW, padx=5, pady=5)
+        self.instructions_text.grid(row=3, column=0, columnspan=8, sticky=tk.NSEW, padx=5, pady=5)
         self.instructions_text.insert(tk.END, "Speak clearly, with a warm and narrative tone.")
         
         # Output options
