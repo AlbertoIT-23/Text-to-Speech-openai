@@ -151,6 +151,16 @@ python tts-generate.py
 - Perfect for integration into other scripts or workflows
 - Ideal for developers wanting to understand the basic API implementation
 
+## 🔄 Open Source & Extensible
+This project is fully open source and designed to be extended. Feel free to fork it, improve it, or use it as a foundation for your own TTS applications. Pull requests welcome!
+Some ideas for extensions:
+
+- Add batch processing capabilities
+- Create language detection and automatic voice selection
+- Implement text chunking for longer documents
+- Add a progress indicator for long audio generation
+- Build a web-based version
+
 ## 📜 License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
