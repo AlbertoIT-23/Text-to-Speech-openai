@@ -4,6 +4,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from docx import Document
 import fitz  # PyMuPDF
+import time  # Aggiungi questa importazione per il timestamp
+import datetime  # Per formattare meglio il timestamp
 
 # Load .env file
 load_dotenv()
@@ -56,8 +58,13 @@ if not input_files:
     print("❌ No files found in the 'input' folder.")
     exit()
 
+# Get the start time for the script execution
+script_start_time = time.time()
+print(f"🚀 Starting batch processing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
 for file in input_files:
     try:
+        start_time = time.time()  # Track time for individual file processing
         print(f"🎤 Processing: {file.name}")
         text = read_input_file(file)
 
@@ -65,8 +72,19 @@ for file in input_files:
         if not text or len(text.strip()) < 10:
             print(f"⚠️ File is empty or too short: {file.name}")
             continue
-
-        output_file = OUTPUT_DIR / (file.stem + ".mp3")
+        
+        # Check if text exceeds the API character limit
+        MAX_CHARS = 4096
+        if len(text) > MAX_CHARS:
+            print(f"⚠️ Text in {file.name} exceeds the 4096 character limit. Truncating...")
+            # Option 1: Simply truncate
+            text = text[:MAX_CHARS]
+            # Option 2: Process in chunks (for a more comprehensive solution)
+            # This would need additional code to handle multiple audio files
+        
+        # Generate timestamp for the filename
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        output_file = OUTPUT_DIR / f"speech_{file.stem}_{timestamp}.mp3"
 
         # Using the recommended streaming approach instead of stream_to_file
         with client.audio.speech.with_streaming_response.create(
@@ -82,7 +100,15 @@ for file in input_files:
                     bytes_written += len(chunk)
                     f.write(chunk)
             
+            # Calculate processing time
+            duration = time.time() - start_time
             print(f"✅ Audio saved to: {output_file} ({bytes_written} bytes)")
+            print(f"⏱️ Processing time: {duration:.2f} seconds")
 
     except Exception as e:
         print(f"❌ Error with file {file.name}: {e}")
+
+# Print summary
+total_duration = time.time() - script_start_time
+print(f"\n✨ Batch processing completed in {total_duration:.2f} seconds")
+print(f"📂 Output files saved to: {OUTPUT_DIR.absolute()}")
