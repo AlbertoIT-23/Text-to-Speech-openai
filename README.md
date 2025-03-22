@@ -7,6 +7,10 @@ Featuring an intuitive graphical interface, the app supports multiple document f
 
 ![GUI Screenshot](https://github.com/user-attachments/assets/c8159f4b-f437-4aa6-8425-3b9326db5a24)
 
+## 🎬 Video Demo
+
+Watch the application in action: [YouTube Demo](https://youtu.be/O9F0fX2OusA)
+
 ## ✨ Key Features
 
 - **User-friendly GUI** with scrollable interface
