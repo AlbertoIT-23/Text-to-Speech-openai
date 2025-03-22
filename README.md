@@ -156,6 +156,7 @@ This project is fully open source and designed to be extended. Feel free to fork
 Some ideas for extensions:
 
 - Add batch processing capabilities
+- Add option to delete/remove stored API keys
 - Create language detection and automatic voice selection
 - Implement text chunking for longer documents
 - Add a progress indicator for long audio generation
