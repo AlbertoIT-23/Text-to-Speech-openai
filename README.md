@@ -97,7 +97,7 @@ The graphical interface allows you to:
 - Easily manage your API key
 - Select output folder
 
-![image](https://github.com/user-attachments/assets/487d14d1-b6cf-4a23-8298-ad2af847793d)
+![image](https://github.com/user-attachments/assets/6df3632f-f938-43e2-8f53-65bca0727217)
 
 ---
 
