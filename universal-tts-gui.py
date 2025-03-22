@@ -1236,7 +1236,7 @@ class ScrollableUniversalTTSApp:
             info_dialog.grab_set()
             
             # Set size and properties - significantly reduced size
-            info_dialog.geometry("380x160")  # Reduced from 400x180
+            info_dialog.geometry("450x160") 
             info_dialog.resizable(False, False)
             
             # Container frame with minimal padding
@@ -1249,7 +1249,7 @@ class ScrollableUniversalTTSApp:
             
             # Saved file path with minimal padding
             ttk.Label(frame, text="Saved to:").pack(pady=(0, 1))  # Minimal padding
-            ttk.Label(frame, text=f"{result}", wraplength=360).pack(pady=(0, 8))  # Reduced padding and wrap width
+            ttk.Label(frame, text=f"{result}", wraplength=430).pack(pady=(0, 8))  # Reduced padding and wrap width
             
             # OK button at the bottom with no extra space
             button_frame = ttk.Frame(frame)
@@ -1257,7 +1257,7 @@ class ScrollableUniversalTTSApp:
             
             # OK button centered
             ok_button = ttk.Button(button_frame, text="OK", command=info_dialog.destroy, width=8)
-            ok_button.pack(pady=(0, 0))  # No padding
+            ok_button.pack(pady=(20, 0))  # No padding
             
             # Center the dialog relative to the main window
             self._center_dialog(info_dialog)
