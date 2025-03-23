@@ -23,6 +23,7 @@ Watch the application in action: [YouTube Demo](https://youtu.be/O9F0fX2OusA)
 - **Secure API key storage** options (system keyring or .env file)
 - **API key management** - store, update, and delete API keys securely
 - **Custom output directory** selection
+- **MVC Architecture** - well-organized codebase for maintainability and extensibility
 
 ## 💿 Quick Start - Windows Installer
 
@@ -45,6 +46,45 @@ Some antivirus programs may flag the installer as suspicious. This is a common f
 3. You can verify the installer's safety through our [VirusTotal scan](https://www.virustotal.com/gui/file/1a09d1fbadbdafb6ed9ac52f8c0357cb774adb8a6d67a1bf5e09248bd71081d1/behavior)
 4. The application is open-source and contains no malicious code - you can review all source code in this repository
 
+## 📂 Project Structure
+
+The project follows the Model-View-Controller (MVC) architecture for better organization and maintainability:
+
+```
+universal-tts/
+  ├── main.py                 # Entry point
+  ├── models/
+  │   ├── __init__.py
+  │   ├── tts_model.py        # TTS API data and business logic
+  │   ├── file_model.py       # File handling operations
+  │   └── settings_model.py   # API key and settings management
+  ├── views/
+  │   ├── __init__.py
+  │   ├── main_view.py        # Main application window
+  │   ├── settings_view.py    # Settings dialog
+  │   ├── text_input_view.py  # Text input tab
+  │   └── file_input_view.py  # File input tab
+  ├── controllers/
+  │   ├── __init__.py
+  │   ├── app_controller.py   # Main controller
+  │   ├── tts_controller.py   # Controller for TTS operations
+  │   └── settings_controller.py  # Controller for settings
+  └── utils/
+      ├── __init__.py
+      ├── logging_config.py   # Logging setup
+      └── helpers.py          # Helper functions
+```
+
+Additional folders in the repository:
+```
+alternative-scripts/          # Scripts for batch processing and simple usage
+  ├── universal_tts.py        # Batch processing script
+  └── tts-generate.py         # Simple direct usage script
+  
+legacy/                       # Previous versions
+  └── universal-tts-gui.py    # Original single-file version
+```
+
 ## 🔧 Developer Setup - From Source Code
 
 If you prefer to run from source code or want to contribute to development:
@@ -62,7 +102,7 @@ python -m venv tts-venv
 This project was developed with Python 3.12.6. Install all required dependencies:
 
 ```bash
-pip install openai==1.68.2 python-dotenv==1.0.1 python-docx==1.1.2 PyMuPDF==1.25.4 sounddevice==0.5.1 keyring==25.6.0
+pip install openai[voice_helpers]==1.68.2 python-dotenv==1.0.1 python-docx==1.1.2 PyMuPDF==1.25.4 sounddevice==0.5.1 keyring==25.6.0
 ```
 
 Or use the requirements.txt file:
@@ -84,7 +124,7 @@ pip install -r requirements.txt
 
 ### 4. Launch the GUI application
 ```bash
-python universal-tts-gui.py
+python main.py
 ```
 
 ## ▶️ Using the Application
@@ -156,7 +196,7 @@ Speak clearly with a warm British accent, use a contemplative pace, and add subt
 
 ## 🔄 Alternative Script Options
 
-If you prefer command-line usage or need automation options, two alternative scripts are included:
+If you prefer command-line usage or need automation options, two alternative scripts are included in the `alternative-scripts` folder:
 
 ### 1. Universal Script (universal_tts.py)
 A batch processing script that automatically converts all files in the `input/` folder:
