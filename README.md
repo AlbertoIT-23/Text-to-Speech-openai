@@ -24,7 +24,30 @@ Watch the application in action: [YouTube Demo](https://youtu.be/O9F0fX2OusA)
 - **API key management** - store, update, and delete API keys securely
 - **Custom output directory** selection
 
-## 🔧 Setup & Installation
+## 💿 Quick Start - Windows Installer
+
+The easiest way to get started is with our Windows installer:
+
+1. **Download**: Get the latest installer from the [Releases](https://github.com/AlbertoIT-23/Text-to-Speech-openai/releases) page
+2. **Install**: Run the installer and follow the prompts
+3. **Launch**: Start Universal-TTS from your Start menu or desktop shortcut
+4. **Configure**: Enter your OpenAI API key when prompted on first launch
+
+### ⚠️ Antivirus Notice
+
+Some antivirus programs may flag the installer as suspicious. This is a common false positive that occurs with Python applications packaged as executables.
+
+**Why this happens**: Tools like PyInstaller package Python code in a way that can trigger heuristic detection in some security software, even though the application is completely safe.
+
+**What to do if this happens**:
+1. If your antivirus quarantines the file, you can restore it from quarantine
+2. Add an exception for the Universal-TTS application in your antivirus software
+3. You can verify the installer's safety through our [VirusTotal scan](https://www.virustotal.com/gui/file/1a09d1fbadbdafb6ed9ac52f8c0357cb774adb8a6d67a1bf5e09248bd71081d1/behavior)
+4. The application is open-source and contains no malicious code - you can review all source code in this repository
+
+## 🔧 Developer Setup - From Source Code
+
+If you prefer to run from source code or want to contribute to development:
 
 ### 1. Clone this repository or download the files
 
@@ -59,21 +82,16 @@ pip install -r requirements.txt
 
 > **Note for Linux users**: You might need to install tkinter separately.
 
-## ▶️ Running the Application
-
-### 1. Activate the virtual environment (if not already active)
-```bash
-.\tts-venv\Scripts\activate  # Windows
-source tts-venv/bin/activate  # Linux/Mac
-```
-
-### 2. Launch the GUI application
+### 4. Launch the GUI application
 ```bash
 python universal-tts-gui.py
 ```
 
-### 3. Configure your OpenAI API key
-When launched for the first time, you'll need to configure your OpenAI API key:
+## ▶️ Using the Application
+
+Regardless of installation method, you'll need to configure your OpenAI API key on first launch:
+
+### 1. Configure your OpenAI API key
 - Click the "⚙️ Config API Key" button
 - Enter your API key
 - Choose a storage method:
@@ -82,13 +100,11 @@ When launched for the first time, you'll need to configure your OpenAI API key:
   - **Session only** (temporary use)
   - You can also **delete your stored API key** from all locations if needed
 
-## 🎛️ Using the GUI
-
-### Text Input Options
+### 2. Text Input Options
 - **Text Input tab**: Directly type or paste text
 - **File Input tab**: Import content from TXT, DOCX, or PDF files
 
-### Voice Configuration
+### 3. Voice Configuration
 - **Voice**: Choose from 11 different voices
   - Regular voices: alloy, echo, fable, onyx, nova, shimmer
   - Special voices (marked with *): ash, ballad, coral, sage, verse
@@ -100,11 +116,11 @@ When launched for the first time, you'll need to configure your OpenAI API key:
 - **Speed**: Adjust speech speed (0.25x to 4.0x, works with tts-1 and tts-1-hd only)
 - **Voice instructions**: Customize speaking style, tone, accent, etc.
 
-### Output Options
+### 4. Output Options
 - Select or create custom output folder
 - Files are saved with descriptive names including voice and timestamp
 
-### Controls
+### 5. Controls
 - **Preview Audio**: Test a short sample before generating the full file
 - **Generate Audio File**: Process the entire text and save to disk
 
