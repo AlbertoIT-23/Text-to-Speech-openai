@@ -79,7 +79,9 @@ Additional folders in the repository:
 ```
 alternative-scripts/          # Scripts for batch processing and simple usage
   ├── universal_tts.py        # Batch processing script
-  └── tts-generate.py         # Simple direct usage script
+  ├── tts-generate.py         # Simple direct usage script
+  └── instructions.txt        # Voice instructions for batch script
+
   
 legacy/                       # Previous versions
   └── universal-tts-gui.py    # Original single-file version
