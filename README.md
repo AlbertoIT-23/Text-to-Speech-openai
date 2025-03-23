@@ -43,7 +43,7 @@ Some antivirus programs may flag the installer as suspicious. This is a common f
 **What to do if this happens**:
 1. If your antivirus quarantines the file, you can restore it from quarantine
 2. Add an exception for the Universal-TTS application in your antivirus software
-3. You can verify the installer's safety through our [VirusTotal scan](https://www.virustotal.com/gui/file/1a09d1fbadbdafb6ed9ac52f8c0357cb774adb8a6d67a1bf5e09248bd71081d1/behavior)
+3. You can verify the installer's safety through our [VirusTotal scan](https://www.virustotal.com/gui/file/1437346855496373b15687fd5b482149015c7640aa1e049f8067ae72cae8c65b)
 4. The application is open-source and contains no malicious code - you can review all source code in this repository
 
 ## 📂 Project Structure
