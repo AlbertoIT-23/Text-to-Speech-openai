@@ -90,9 +90,9 @@ class ScrollableUniversalTTSApp:
         settings_dialog.transient(self.root)
         settings_dialog.grab_set()
         
-        # Set dialog size - ridotta a dimensioni più compatte
-        settings_dialog.geometry("500x320")  
-        settings_dialog.minsize(500, 320)  
+        # Set dialog size
+        settings_dialog.geometry("450x410")  
+        settings_dialog.minsize(450, 410)  
         settings_dialog.resizable(True, True)
         
         # Create dialog content
@@ -190,6 +190,35 @@ class ScrollableUniversalTTSApp:
             )
             key_note.pack(anchor=tk.W, pady=(3, 0))
         
+        # Delete Key option
+        delete_frame = ttk.LabelFrame(content_frame, text="Delete API Key", padding="8")
+        delete_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        delete_label = ttk.Label(
+            delete_frame, 
+            text="Remove the API key from all storage locations (system credential manager, .env file, and current session).",
+            font=('Segoe UI', 9),
+            wraplength=460
+        )
+        delete_label.pack(anchor=tk.W, pady=(0, 5))
+        
+        delete_button = tk.Button(
+            delete_frame, 
+            text="Delete API Key", 
+            command=lambda: self.delete_api_key(settings_dialog),
+            font=('Arial', 10),
+            background="#dc3545", 
+            foreground="white",
+            activebackground="#c82333",
+            relief=tk.RAISED,
+            borderwidth=1,
+            padx=8,
+            pady=3,
+            cursor="hand2"
+        )
+
+        delete_button.pack(anchor=tk.W)
+                
         # Buttons
         button_frame = ttk.Frame(content_frame)
         button_frame.pack(fill=tk.X, pady=(8, 0))
@@ -283,6 +312,88 @@ class ScrollableUniversalTTSApp:
         
         # Close the dialog
         dialog.destroy()
+
+    def delete_api_key(self, dialog):
+        """Delete API key from all storage locations"""
+        # Confirm with user before deleting
+        if not messagebox.askyesno(
+            "Confirm Deletion", 
+            "Are you sure you want to delete your OpenAI API key from all storage locations?\n\n"
+            "This will remove the key from:\n"
+            "• System credential manager (if used)\n"
+            "• .env file (if present)\n"
+            "• Current session\n\n"
+            "You'll need to enter your API key again to use the application.",
+            icon=messagebox.WARNING,
+            parent=dialog
+        ):
+            return  # User cancelled
+        
+        success_messages = []
+        error_messages = []
+        
+        # 1. Remove from current session
+        if self.api_key:
+            self.api_key = None
+            self.client = None
+            self.async_client = None
+            if "OPENAI_API_KEY" in os.environ:
+                del os.environ["OPENAI_API_KEY"]
+            success_messages.append("• Removed from current session")
+            logging.info("API Key removed from current session")
+        
+        # 2. Remove from system credential manager
+        if KEYRING_AVAILABLE:
+            try:
+                # keyring.delete_password raises an exception if key not found
+                keyring.delete_password(SERVICE_NAME, USERNAME)
+                success_messages.append("• Removed from system credential manager")
+                logging.info("API Key removed from system credential manager")
+            except Exception as e:
+                # Log the error but continue
+                logging.info(f"No API key found in system credential manager or error: {e}")
+        
+        # 3. Remove from .env file
+        env_path = Path(".env")
+        if env_path.exists():
+            try:
+                with open(env_path, "r") as f:
+                    lines = f.readlines()
+                
+                # Remove any line starting with OPENAI_API_KEY
+                new_lines = [line for line in lines if not line.startswith("OPENAI_API_KEY=")]
+                
+                # Write back to file if any lines were removed
+                if len(new_lines) < len(lines):
+                    with open(env_path, "w") as f:
+                        f.writelines(new_lines)
+                    success_messages.append("• Removed from .env file")
+                    logging.info("API Key removed from .env file")
+            except Exception as e:
+                error_msg = f"Error removing API key from .env file: {e}"
+                error_messages.append(f"• Failed to remove from .env file: {str(e)}")
+                logging.error(error_msg)
+        
+        # Clear the API key entry field
+        if hasattr(self, 'api_entry'):
+            self.api_entry.delete(0, tk.END)  # Clear the entry field
+        
+        self.api_key_source = None
+        
+        # Show success or error messages
+        if success_messages:
+            success_text = "API Key successfully removed from:\n" + "\n".join(success_messages)
+            if error_messages:
+                success_text += "\n\nErrors encountered:\n" + "\n".join(error_messages)
+            messagebox.showinfo("API Key Deleted", success_text, parent=dialog)
+            logging.info("API Key deletion completed with some successes")
+        elif error_messages:
+            error_text = "Failed to remove API Key:\n" + "\n".join(error_messages)
+            messagebox.showerror("Error", error_text, parent=dialog)
+            logging.error("API Key deletion failed completely")
+        else:
+            messagebox.showinfo("No Action Needed", "No API Key was found to delete.", parent=dialog)
+            logging.info("No API Key found to delete")
 
     def _toggle_api_key_visibility(self):
         """Toggle showing or hiding the API key"""
