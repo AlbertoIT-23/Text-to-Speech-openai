@@ -21,6 +21,7 @@ Watch the application in action: [YouTube Demo](https://youtu.be/O9F0fX2OusA)
 - **Audio preview** before generating full files
 - **Multiple output formats** - mp3, opus, aac, flac, wav, pcm
 - **Secure API key storage** options (system keyring or .env file)
+- **API key management** - store, update, and delete API keys securely
 - **Custom output directory** selection
 
 ## 🔧 Setup & Installation
@@ -79,6 +80,7 @@ When launched for the first time, you'll need to configure your OpenAI API key:
   - **System credential manager** (recommended for security)
   - **.env file** (convenient but less secure)
   - **Session only** (temporary use)
+  - You can also **delete your stored API key** from all locations if needed
 
 ## 🎛️ Using the GUI
 
@@ -105,6 +107,21 @@ When launched for the first time, you'll need to configure your OpenAI API key:
 ### Controls
 - **Preview Audio**: Test a short sample before generating the full file
 - **Generate Audio File**: Process the entire text and save to disk
+
+## 🔑 API Key Management
+
+The app provides comprehensive API key management:
+
+- **Multiple storage options**:
+  - System credential manager (most secure, requires keyring package)
+  - .env file (convenient but less secure)
+  - Session only (temporary use)
+- **Key visibility toggle**: Optionally show/hide your key while typing
+- **Delete functionality**: Remove your API key from all storage locations
+  - System credential manager
+  - .env file
+  - Current session
+- **Automatic detection**: The app checks all possible storage locations on startup
 
 ## 🗣️ Voice Customization
 
@@ -156,7 +173,7 @@ This project is fully open source and designed to be extended. Feel free to fork
 Some ideas for extensions:
 
 - Add batch processing capabilities
-- Add option to delete/remove stored API keys
+- ~~Add option to delete/remove stored API keys~~ ✅ Implemented!
 - Create language detection and automatic voice selection
 - Implement text chunking for longer documents
 - Add a progress indicator for long audio generation
