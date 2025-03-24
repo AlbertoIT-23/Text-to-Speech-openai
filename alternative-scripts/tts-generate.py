@@ -36,7 +36,7 @@ input_text = """Welcome to the Universal Text-to-Speech tool. This is a simple e
 instructions = """Voice: High-energy, upbeat, and encouraging, projecting enthusiasm and motivation.\n\nPunctuation: Short, punchy sentences with strategic pauses to maintain excitement and clarity.\n\nDelivery: Fast-paced and dynamic, with rising intonation to build momentum and keep engagement high.\n\nPhrasing: Action-oriented and direct, using motivational cues to push participants forward.\n\nTone: Positive, energetic, and empowering, creating an atmosphere of encouragement and achievement."""
 
 # Check the character limit
-MAX_CHARS = 4096
+MAX_CHARS = 8192
 if len(input_text) > MAX_CHARS:
     print(f"⚠️ Warning: Input text exceeds the {MAX_CHARS} character limit ({len(input_text)} chars)")
     print(f"⚠️ Text will be truncated to {MAX_CHARS} characters")
