@@ -9,7 +9,7 @@ import datetime
 
 # ========== CONFIGURATION OPTIONS ============
 # You can modify these values to change the output
-VOICE = "ballad"        # Options: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse
+VOICE = "coral"        # Options: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse
 MODEL = "gpt-4o-mini-tts"  # Options: gpt-4o-mini-tts, tts-1, tts-1-hd
 FORMAT = "mp3"         # Options: mp3, opus, aac, flac, wav, pcm
 SPEED = 1.0            # Range: 0.25 to 4.0
@@ -19,12 +19,20 @@ SPEED = 1.0            # Range: 0.25 to 4.0
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Define folders
-INPUT_DIR = Path("input")
-OUTPUT_DIR = Path("output")
-INSTRUCTIONS_FILE = Path("instructions.txt")
+# Define script directory and folders relative to the script
+SCRIPT_DIR = Path(__file__).parent.absolute()
+INPUT_DIR = SCRIPT_DIR / "input"
+OUTPUT_DIR = SCRIPT_DIR / "output"
+INSTRUCTIONS_FILE = SCRIPT_DIR / "instructions.txt"
+
+# Create input and output directories if they don't exist
 INPUT_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
+
+print(f"🔍 Script directory: {SCRIPT_DIR}")
+print(f"📁 Input directory: {INPUT_DIR}")
+print(f"📁 Output directory: {OUTPUT_DIR}")
+print(f"📄 Looking for instructions at: {INSTRUCTIONS_FILE}")
 
 # Read .txt files
 def read_txt(file_path):
@@ -60,10 +68,11 @@ if SPEED < 0.25 or SPEED > 4.0:
 # Load instructions from file if it exists
 if INSTRUCTIONS_FILE.exists():
     instructions = read_txt(INSTRUCTIONS_FILE)
-    print(f"🗒️ Loaded instructions from instructions.txt")
+    print(f"🗒️ Loaded instructions from: {INSTRUCTIONS_FILE}")
 else:
     instructions = "Speak clearly, with a warm and narrative tone."
-    print("ℹ️ No instructions.txt found. Using default instructions.")
+    print(f"ℹ️ No instructions file found at: {INSTRUCTIONS_FILE}")
+    print(f"📝 Using default instructions: \"{instructions}\"")
 
 # Print configuration details
 print(f"🎤 Voice: {VOICE}")
@@ -74,7 +83,7 @@ print(f"⏩ Speed: {SPEED}")
 # Get all input files
 input_files = list(INPUT_DIR.glob("*"))
 if not input_files:
-    print("❌ No files found in the 'input' folder.")
+    print(f"❌ No files found in the input folder: {INPUT_DIR}")
     exit()
 
 # Get the start time for the script execution
@@ -94,7 +103,7 @@ for i, file in enumerate(input_files, 1):
             continue
         
         # Check if text exceeds the API character limit
-        MAX_CHARS = 4096
+        MAX_CHARS = 8192
         if len(text) > MAX_CHARS:
             print(f"⚠️ Text in {file.name} exceeds the {MAX_CHARS} character limit ({len(text)} chars). Truncating...")
             text = text[:MAX_CHARS]
